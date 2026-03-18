@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Magazzino Gino</title>
+
+<style>
+body{
+font-family:Arial;
+background:#0f0f0f;
+color:#eee;
+padding:20px;
+max-width:700px;
+margin:auto;
+}
+
+h1{color:#9fe870;}
+
+button{
+padding:12px;
+width:100%;
+margin-top:10px;
+background:#9fe870;
+border:none;
+font-size:16px;
+}
+
+#chat{
+margin-top:20px;
+background:#181818;
+padding:15px;
+height:250px;
+overflow:auto;
+}
+
+.msg{margin-bottom:10px;}
+.user{color:#8fd3ff;}
+.bot{color:#9fe870;}
+
+.prod{
+padding:5px 0;
+border-bottom:1px solid #333;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Magazzino Gino</h1>
+
+<button onclick="startVoice()">🎤 Parla con Gino</button>
+
+<div id="chat"></div>
+
+<h3>Inventario</h3>
+<div id="inv"></div>
+
+<script>
+
+let inventario=[
+{nome:"piatti saturnia",quantita:120,min:30,movimenti:[]},
+{nome:"bicchieri acqua",quantita:80,min:20,movimenti:[]}
+]
+
+// ===== UI =====
+
+function render(){
+
+let div=document.getElementById("inv")
+div.innerHTML=""
+
+inventario.forEach(p=>{
+let r=document.createElement("div")
+r.className="prod"
+r.innerText=p.nome+" — "+p.quantita
+div.appendChild(r)
+})
+
+}
+
+function chat(role,text){
+
+let d=document.createElement("div")
+d.className="msg "+role
+d.innerText=text
+document.getElementById("chat").appendChild(d)
+
+}
+
+// ===== CORE =====
+
+function trova(frase){
+
+frase=frase.toLowerCase()
+
+for(let p of inventario){
+if(frase.includes(p.nome)){
+return p
+}
+}
+
+return null
+}
+
+function numero(frase){
+
+let m=frase.match(/\d+/)
+return m?parseInt(m[0]):null
+
+}
+
+function gino(frase){
+
+frase=frase.toLowerCase()
+
+if(frase.includes("quanti")){
+
+let p=trova(frase)
+
+if(!p)return "Non trovo il prodotto"
+
+return "Abbiamo "+p.quantita+" "+p.nome
+
+}
+
+if(frase.includes("consegnato")||frase.includes("scarica")){
+
+let p=trova(frase)
+let q=numero(frase)
+
+if(!p)return "Non trovo il prodotto"
+if(!q)return "Quanti pezzi?"
+
+p.quantita-=q
+
+p.movimenti.push({tipo:"uscita",qty:q,data:Date.now()})
+
+render()
+
+return "Ho scaricato "+q+" "+p.nome
+
+}
+
+if(frase.includes("riordinare")){
+
+let critici=inventario.filter(p=>p.quantita<=p.min)
+
+if(critici.length===0)return "Tutto ok"
+
+return "Da riordinare: "+critici.map(p=>p.nome).join(", ")
+
+}
+
+return "Non ho capito"
+
+}
+
+// ===== VOCE =====
+
+function parla(text){
+
+chat("bot","Gino: "+text)
+
+let msg=new SpeechSynthesisUtterance(text)
+msg.lang="it-IT"
+
+speechSynthesis.speak(msg)
+
+}
+
+function startVoice(){
+
+let rec=new webkitSpeechRecognition()
+
+rec.lang="it-IT"
+
+rec.onresult=function(e){
+
+let t=e.results[0][0].transcript
+
+chat("user","Tu: "+t)
+
+let r=gino(t)
+
+parla(r)
+
+}
+
+rec.start()
+
+}
+
+render()
+
+</script>
+
+</body>
+</html>
